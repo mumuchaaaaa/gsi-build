@@ -1,4 +1,4 @@
-name: Build TrebleDroid xDroid-14 GSI
+name: Build TrebleDroid xDroid‑14 GSI
 
 on:
   workflow_dispatch:
@@ -18,35 +18,38 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y openjdk-11-jdk git python3 unzip rsync bc curl \
-                                build-essential zip ccache libssl-dev lzop \
-                                liblz4-tool libxml2-utils zipalign
+        sudo apt-get install -y openjdk-11-jdk git python3 unzip rsync bc \
+          curl build-essential zip ccache libssl-dev lzop liblz4-tool \
+          libxml2-utils zipalign
 
     - name: Setup ccache
       run: |
         mkdir -p $CCACHE_DIR
         ccache -M 10G
 
-    - name: Init & sync repo
+    - name: Init & sync TrebleDroid + xDroid
       run: |
         curl https://storage.googleapis.com/git-repo-downloads/repo > repo
-        chmod +x repo
-        sudo mv repo /usr/local/bin/
+        chmod +x repo && sudo mv repo /usr/local/bin/
         mkdir trebledroid && cd trebledroid
         repo init -u https://github.com/TrebleDroid/trebledroid_manifest.git -b android-14.0
         mkdir -p .repo/local_manifests
-        curl -L https://raw.githubusercontent.com/xdroid-oss/xdroid_manifest/android-14/local_manifest.xml > .repo/local_manifests/local_manifest.xml
+        curl -L https://raw.githubusercontent.com/xdroid-oss/xdroid_manifest/android-14/local_manifest.xml \
+          > .repo/local_manifests/local_manifest.xml
         repo sync -c --no-tags --no-clone-bundle -j$(nproc)
 
-    - name: Build GSI
+    - name: Build GSI image
       run: |
         cd trebledroid
         source build/envsetup.sh
         lunch treble_arm64_ab-userdebug
         mka gsystemimage
 
-    - name: Upload GSI Image
+    - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: GSI-System-Image
-        path: trebledroid/out/target/product/*/system.img
+        name: gsi-images
+        path: |
+          trebledroid/out/target/product/*/system.img
+          trebledroid/out/target/product/*/system_other.img
+        retention-days: 7
